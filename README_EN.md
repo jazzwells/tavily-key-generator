@@ -5,8 +5,14 @@
 This repository is the multi-service registration toolkit and aggregation API
 upstream for:
 
-- registering `Tavily` / `Firecrawl` keys
+- registering `Firecrawl` / `Exa` keys
 - validating that the keys actually work before feeding a unified search layer
+
+## Current Status
+
+- `Firecrawl`: available
+- `Exa`: available
+- `Tavily`: based on the current local project testing, the official email registration entry is closed, so it is temporarily unavailable
 
 It is not the main product repository for `MySearch`.  
 If you want the public-facing unified search console, MCP, Skill, and Social / X
@@ -25,14 +31,14 @@ integration, use the standalone project:
 
 ## Features
 
-- Multi-service launcher: choose Tavily or Firecrawl at startup
+- Multi-service launcher: choose Tavily / Firecrawl / Exa at startup
 - Automatic environment bootstrap: checks `venv`, dependencies, and browsers
 - Unified mail layer: supports Cloudflare Mail API and DuckMail
 - Multi-domain support: choose the active domain at runtime
 - Concurrent registration: batch and parallel runs are supported
 - Background browser mode: headless by default, visible mode when debugging
 - Real usability verification: validates the key against the official API
-- Automatic upload to proxy pools
+- Automatic upload to proxy pools with a per-service marker
 - A clean upstream for unified search gateways such as `MySearch-Proxy`
 - Cross-platform startup: Windows, macOS, and Linux
 
@@ -63,6 +69,8 @@ cp .env.example .env
 
 Edit `.env` and fill in your mail settings and optional upload settings.
 
+If `SERVER_URL` and `SERVER_ADMIN_PASSWORD` are configured, successful registrations can be uploaded automatically.
+
 ### 3. Run
 
 macOS / Linux:
@@ -82,6 +90,20 @@ Windows:
 ```bat
 start_auto.bat
 ```
+
+Current launcher options:
+
+```text
+1. Tavily
+2. Firecrawl
+3. Exa
+```
+
+Notes:
+
+- `Exa` accounts are saved to `exa_accounts.txt`
+- the saved format is `email,EMAIL_OTP_ONLY,api_key`
+- the `Tavily` option is still shown in the launcher, but it is currently unavailable based on local testing
 
 ## Recommended Pairing
 
@@ -111,7 +133,7 @@ ships the runnable implementation.
 
 This repo only handles:
 
-- Tavily / Firecrawl key registration
+- Firecrawl / Exa key registration
 - live key validation
 - optional aggregation API serving for `MySearch` / `MySearch-Proxy`
 

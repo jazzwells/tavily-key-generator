@@ -125,6 +125,7 @@ from config import (
 )
 from tavily_core import create_email as create_tavily_email, register as register_tavily
 from firecrawl_core import register as register_firecrawl
+from exa_core import register as register_exa
 from mail_provider import create_email, get_active_domain, get_configured_domains, set_selected_domain
 
 # ──────────────────────────────────────────────
@@ -199,9 +200,21 @@ def validate_runtime_config(upload, show_provider_summary=True):
     return True
 
 def print_runtime_summary(service="tavily"):
-    service_name = "Tavily" if service == "tavily" else "Firecrawl"
-    output_file = "accounts.txt" if service == "tavily" else "firecrawl_accounts.txt"
-    account_prefix = "tavily-" if service == "tavily" else "fc-"
+    service_name = {
+        "tavily": "Tavily",
+        "firecrawl": "Firecrawl",
+        "exa": "Exa",
+    }.get(service, "Tavily")
+    output_file = {
+        "tavily": "accounts.txt",
+        "firecrawl": "firecrawl_accounts.txt",
+        "exa": "exa_accounts.txt",
+    }.get(service, "accounts.txt")
+    account_prefix = {
+        "tavily": "tavily-",
+        "firecrawl": "fc-",
+        "exa": "exa-",
+    }.get(service, "tavily-")
     print(f"""
 ┌──────────────────────────────────────────┐
 │      多服务自动注册启动台                │
@@ -395,8 +408,10 @@ def register_one(index, total, upload, service="tavily"):
 
         if service == "tavily":
             result = register_tavily(email, password)
-        else:  # firecrawl
+        elif service == "firecrawl":
             result = register_firecrawl(email, password)
+        else:
+            result = register_exa(email, password)
 
         if result and result != "SUCCESS_NO_KEY":
             if upload:
@@ -476,14 +491,17 @@ def prompt_service_choice():
     print("\n请选择要注册的服务：")
     print("  1. Tavily")
     print("  2. Firecrawl")
+    print("  3. Exa")
 
     while True:
-        print("请输入选项 (1-2，默认 1): ", end="")
+        print("请输入选项 (1-3，默认 1): ", end="")
         raw = input().strip()
         if raw == "" or raw == "1":
             return "tavily"
         elif raw == "2":
             return "firecrawl"
+        elif raw == "3":
+            return "exa"
         else:
             print("❌ 请输入有效编号")
             continue
@@ -492,7 +510,7 @@ def main():
     service = prompt_service_choice()
     print_runtime_summary(service)
 
-    # Firecrawl 不需要 Solver
+    # 目前只有 Tavily 需要 Solver
     need_solver = (service == "tavily")
 
     if not validate_runtime_config(False, show_provider_summary=True):

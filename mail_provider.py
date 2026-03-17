@@ -32,7 +32,7 @@ _DUCKMAIL_DOMAIN_PRIORITY = (
 _DUCKMAIL_DOMAIN_CACHE = None
 _DUCKMAIL_MAILBOX_CACHE = {}
 _SELECTED_DOMAIN = ""
-_SUPPORTED_SERVICES = ("tavily", "firecrawl")
+_SUPPORTED_SERVICES = ("tavily", "firecrawl", "exa")
 
 
 def rand_str(n=8):
@@ -72,7 +72,11 @@ def _normalize_service(service):
 
 def _username_prefix(service):
     service = _normalize_service(service)
-    return "fc" if service == "firecrawl" else "tavily"
+    if service == "firecrawl":
+        return "fc"
+    if service == "exa":
+        return "exa"
+    return "tavily"
 
 
 def create_email(service="tavily"):
@@ -104,13 +108,13 @@ def get_verification_link(email, timeout=120):
     )
 
 
-def get_email_code(email, timeout=120):
+def get_email_code(email, timeout=120, service="tavily"):
     """等待邮箱里的 6 位验证码。"""
     print(f"📨 等待邮箱验证码（最多 {timeout} 秒）...")
     return _poll_mailbox(
         email=email,
         timeout=timeout,
-        extractor=_extract_email_code,
+        extractor=lambda message: _extract_email_code(message, service=service),
         found_message="✅ 收到 6 位验证码",
         timeout_message="❌ 等待邮箱验证码超时",
         error_prefix="读取邮箱验证码失败",
@@ -175,16 +179,35 @@ def _extract_verification_link(message):
     return None
 
 
-def _extract_email_code(message):
+def _extract_email_code(message, service="tavily"):
+    service = _normalize_service(service)
     subject = (message.get("subject") or "").lower()
-    if "verify your identity" not in subject and "verify" not in subject and "tavily" not in subject:
-        return None
-
+    text = message.get("text") or ""
     content = _message_content(message)
-    match = re.search(r"\b(\d{6})\b", content)
-    if not match:
-        return None
-    return match.group(1)
+    combined = f"{subject}\n{content}".lower()
+
+    if service == "exa":
+        if "exa" not in combined:
+            return None
+        if "verification code" not in combined and "sign in" not in combined:
+            return None
+        for source in (text, content):
+            match = re.search(
+                r"verification code(?:\s+for\s+exa)?(?:\s+is)?[^0-9]*(\d{6})",
+                source,
+                re.IGNORECASE,
+            )
+            if match:
+                return match.group(1)
+    else:
+        if "verify your identity" not in subject and "verify" not in subject and "tavily" not in combined:
+            return None
+
+    for source in (text, content):
+        match = re.search(r"\b(\d{6})\b", source)
+        if match:
+            return match.group(1)
+    return None
 
 
 def _iter_messages(email):
