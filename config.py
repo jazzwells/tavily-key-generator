@@ -5,6 +5,17 @@ Tavily 注册器配置
 import os
 from pathlib import Path
 
+PLACEHOLDER_ENV_VALUES = {
+    "EMAIL_API_URL": {"https://your-mail-api.example.com"},
+    "EMAIL_API_TOKEN": {"replace-with-your-token"},
+    "EMAIL_DOMAIN": {"example.com"},
+    "EMAIL_DOMAINS": {"example.com", "example.org"},
+    "DUCKMAIL_DOMAIN": {"example.com"},
+    "DUCKMAIL_DOMAINS": {"example.com", "example.org"},
+    "SERVER_URL": {"https://your-server.example.com"},
+    "SERVER_ADMIN_PASSWORD": {"replace-with-your-admin-password"},
+}
+
 
 def _load_dotenv():
     env_path = Path(__file__).resolve().with_name(".env")
@@ -46,6 +57,28 @@ def _get_bool(name, default=False):
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def is_placeholder_env_value(name, value):
+    normalized = (value or "").strip()
+    if not normalized:
+        return False
+
+    normalized_lower = normalized.lower()
+    placeholder_values = {item.lower() for item in PLACEHOLDER_ENV_VALUES.get(name, set())}
+    if normalized_lower in placeholder_values:
+        return True
+
+    if normalized_lower.startswith("replace-with-"):
+        return True
+
+    if normalized_lower in {"example.com", "example.org"}:
+        return True
+
+    if normalized_lower.startswith("https://your-") and ".example.com" in normalized_lower:
+        return True
+
+    return False
 
 
 _load_dotenv()

@@ -118,6 +118,7 @@ from config import (
     SUPPORTED_EMAIL_PROVIDERS,
     DEFAULT_COUNT,
     DEFAULT_DELAY,
+    is_placeholder_env_value,
     SOLVER_PORT,
     SOLVER_THREADS,
     LOCAL_SOLVER_URL,
@@ -139,10 +140,17 @@ def validate_runtime_config(upload, show_provider_summary=True):
         return False
 
     missing = []
+    placeholder = []
     required = {}
+
+    def append_unique(items, value):
+        if value not in items:
+            items.append(value)
 
     if EMAIL_PROVIDER == "duckmail":
         required["DUCKMAIL_API_URL"] = DUCKMAIL_API_URL
+        if any(is_placeholder_env_value("DUCKMAIL_DOMAINS", item) for item in DUCKMAIL_DOMAINS):
+            append_unique(placeholder, "DUCKMAIL_DOMAIN / DUCKMAIL_DOMAINS")
     else:
         required.update({
             "EMAIL_API_URL": EMAIL_API_URL,
@@ -150,6 +158,8 @@ def validate_runtime_config(upload, show_provider_summary=True):
         })
         if not EMAIL_DOMAINS:
             missing.append("EMAIL_DOMAIN / EMAIL_DOMAINS")
+        elif any(is_placeholder_env_value("EMAIL_DOMAINS", item) for item in EMAIL_DOMAINS):
+            append_unique(placeholder, "EMAIL_DOMAIN / EMAIL_DOMAINS")
 
     if upload:
         required.update({
@@ -160,12 +170,19 @@ def validate_runtime_config(upload, show_provider_summary=True):
     for key, value in required.items():
         if not value:
             missing.append(key)
+        elif is_placeholder_env_value(key, value):
+            append_unique(placeholder, key)
 
-    if missing:
-        print("❌ 缺少必要环境变量/配置：")
+    if missing or placeholder:
+        if missing:
+            print("❌ 缺少必要环境变量/配置：")
         for key in missing:
             print(f"   - {key}")
-        print("   请先配置 .env 或系统环境变量。")
+        if placeholder:
+            print("❌ 检测到 .env.example 占位值尚未替换：")
+            for key in placeholder:
+                print(f"   - {key}")
+        print("   请先配置 .env 或系统环境变量，并把示例占位值替换成真实配置。")
         return False
 
     if show_provider_summary:
